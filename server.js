@@ -827,7 +827,7 @@ wss.on(
                     {
 
 
-                      type:'roomError',
+                      type:'roomClosed',
 
 
                       message:'房主退出，一起听结束'
@@ -1124,7 +1124,7 @@ wss.on(
                 {
 
 
-                  type:'roomError',
+                  type:'roomClosed',
 
 
                   message:'房主断开，一起听结束'
