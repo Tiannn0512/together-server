@@ -1,6 +1,8 @@
 const WebSocket = require('ws')
 
+
 const PORT = process.env.PORT || 3000
+
 
 const wss = new WebSocket.Server({
 
@@ -19,29 +21,40 @@ console.log(
 
 
 
-// 房间结构
-//
-// rooms={
-//
-//   "123456":{
-//
-//      clients:[ws,ws],
-//
-//      host:ws,
-//
-//      state:{
-//          musicInfo:null,
-//          currentTime:0,
-//          playing:false,
-//          timestamp:0
-//      }
-//
-//   }
-//
-// }
+/*
+
+房间结构：
+
+rooms={
+
+  "123456":{
+
+    clients:[ws,ws],
+
+    host:ws,
+
+    state:{
+
+      musicInfo:null,
+
+      currentTime:0,
+
+      playing:false,
+
+      timestamp:0
+
+    }
+
+  }
+
+}
+
+*/
 
 
 const rooms = {}
+
+
 
 
 
@@ -61,6 +74,42 @@ function createRoomCode(){
     Math.random()*900000
 
   ).toString()
+
+
+}
+
+
+
+
+
+
+
+
+
+// 发送消息
+
+function sendMessage(
+
+  ws,
+
+  message
+
+){
+
+
+  if(
+
+    ws.readyState === WebSocket.OPEN
+
+  ){
+
+    ws.send(
+
+      JSON.stringify(message)
+
+    )
+
+  }
 
 
 }
@@ -125,6 +174,28 @@ function broadcast(
 
 
 
+// 发送当前在线人数
+
+function sendOnlineCount(
+
+  room
+
+){
+
+
+  return room.clients.length
+
+
+}
+
+
+
+
+
+
+
+
+
 // 更新房间状态
 
 function updateRoomState(
@@ -142,12 +213,13 @@ function updateRoomState(
 
 
 
+
+
   switch(message.type){
 
 
 
-    case 'musicChange':
-
+    case 'musicChange':{
 
 
       if(
@@ -172,19 +244,20 @@ function updateRoomState(
 
       break
 
+    }
 
 
 
 
 
-    case 'play':
 
+
+    case 'play':{
 
 
       room.state.playing = true
 
 
-
       if(
 
         message.data &&
@@ -204,19 +277,20 @@ function updateRoomState(
 
       break
 
+    }
 
 
 
 
 
-    case 'pause':
 
+
+    case 'pause':{
 
 
       room.state.playing = false
 
 
-
       if(
 
         message.data &&
@@ -236,13 +310,15 @@ function updateRoomState(
 
       break
 
+    }
 
 
 
 
 
-    case 'progress':
 
+
+    case 'progress':{
 
 
       if(
@@ -270,19 +346,13 @@ function updateRoomState(
 
       break
 
+    }
 
 
   }
 
 
 }
-
-
-
-
-
-
-
 
 
 wss.on(
@@ -293,9 +363,7 @@ wss.on(
 
 
     console.log(
-
       '客户端连接'
-
     )
 
 
@@ -319,27 +387,32 @@ wss.on(
 
 
         let message
-        
-        try {
-        
 
-          message =  JSON.parse(
+
+
+        try{
+
+
+          message = JSON.parse(
 
             data.toString()
 
           )
-        
-        } catch(e){
 
 
-        console.log(
+        }catch(e){
 
-          '消息解析失败:',
-          e
 
-        )
+          console.log(
 
-        return
+            '消息解析失败:',
+
+            e
+
+          )
+
+
+          return
 
         }
 
@@ -355,12 +428,9 @@ wss.on(
 
 
 
-
-
           // 创建房间
 
           case 'createRoom':{
-
 
 
             let code
@@ -370,9 +440,7 @@ wss.on(
             do{
 
 
-              code =
-
-                createRoomCode()
+              code = createRoomCode()
 
 
 
@@ -398,9 +466,7 @@ wss.on(
               ],
 
 
-
               host:ws,
-
 
 
               state:{
@@ -429,9 +495,7 @@ wss.on(
 
 
 
-            rooms[code] =
-
-              room
+            rooms[code] = room
 
 
 
@@ -439,15 +503,9 @@ wss.on(
 
 
 
-            ws.roomCode =
+            ws.roomCode = code
 
-              code
-
-
-
-            ws.isHost =
-
-              true
+            ws.isHost = true
 
 
 
@@ -455,20 +513,29 @@ wss.on(
 
 
 
-            ws.send(
+            sendMessage(
 
-              JSON.stringify({
+              ws,
+
+              {
 
 
                 type:'roomCreated',
 
 
-                roomCode:code
+                roomCode:code,
 
 
-              })
+                onlineCount:
+
+                  sendOnlineCount(room)
+
+
+              }
 
             )
+
+
 
 
 
@@ -495,10 +562,10 @@ wss.on(
           case 'joinRoom':{
 
 
-
             const code =
 
               message.roomCode
+
 
 
 
@@ -518,27 +585,15 @@ wss.on(
 
 
 
-
-
-              room.clients.push(
-
-                ws
-
-              )
+              room.clients.push(ws)
 
 
 
 
-              ws.roomCode =
 
-                code
+              ws.roomCode = code
 
-
-
-
-              ws.isHost =
-
-                false
+              ws.isHost = false
 
 
 
@@ -546,18 +601,25 @@ wss.on(
 
 
 
-              ws.send(
+              sendMessage(
 
-                JSON.stringify({
+                ws,
+
+                {
 
 
                   type:'roomJoined',
 
 
-                  roomCode:code
+                  roomCode:code,
 
 
-                })
+                  onlineCount:
+
+                    sendOnlineCount(room)
+
+
+                }
 
               )
 
@@ -569,15 +631,17 @@ wss.on(
 
 
 
-              // 返回当前状态
+              // 返回当前同步状态
 
               if(room.state){
 
 
 
-                ws.send(
+                sendMessage(
 
-                  JSON.stringify({
+                  ws,
+
+                  {
 
 
                     type:'syncState',
@@ -593,7 +657,7 @@ wss.on(
                       room.state
 
 
-                  })
+                  }
 
                 )
 
@@ -608,41 +672,30 @@ wss.on(
 
 
 
-              // 通知房主
+              // 通知其他成员
 
-              room.clients.forEach(
+              broadcast(
 
-                client=>{
+                room,
 
-
-                  if(
-
-                    client !== ws &&
-
-                    client.readyState === WebSocket.OPEN
-
-                  ){
+                {
 
 
-                    client.send(
-
-                      JSON.stringify({
+                  type:'userJoined',
 
 
-                        type:'userJoined'
+                  onlineCount:
+
+                    sendOnlineCount(room)
 
 
-                      })
+                },
 
-                    )
-
-
-                  }
-
-
-                }
+                ws
 
               )
+
+
 
 
 
@@ -652,11 +705,11 @@ wss.on(
 
 
 
+              sendMessage(
 
+                ws,
 
-              ws.send(
-
-                JSON.stringify({
+                {
 
 
                   type:'roomError',
@@ -665,10 +718,9 @@ wss.on(
                   message:'房间不存在'
 
 
-                })
+                }
 
               )
-
 
 
             }
@@ -692,17 +744,16 @@ wss.on(
 
 
 
-          // 主动退出房间
+
+          // 主动退出
 
           case 'leaveRoom':{
-
-
-
 
 
             const code =
 
               ws.roomCode
+
 
 
 
@@ -716,9 +767,13 @@ wss.on(
 
 
 
+
+
             const room =
 
               rooms[code]
+
+
 
 
 
@@ -738,7 +793,7 @@ wss.on(
 
               room.clients.filter(
 
-                client=>client!==ws
+                client => client !== ws
 
               )
 
@@ -749,7 +804,8 @@ wss.on(
 
 
 
-            // 如果房主退出
+
+            // 房主退出
 
             if(
 
@@ -759,38 +815,27 @@ wss.on(
 
 
 
-
-
               room.clients.forEach(
 
                 client=>{
 
 
-                  if(
+                  sendMessage(
 
-                    client.readyState === WebSocket.OPEN
+                    client,
 
-                  ){
-
-
-
-                    client.send(
-
-                      JSON.stringify({
+                    {
 
 
-                        type:'roomError',
+                      type:'roomError',
 
 
-                        message:'房主退出，一起听结束'
+                      message:'房主退出，一起听结束'
 
 
-                      })
+                    }
 
-                    )
-
-
-                  }
+                  )
 
 
                 }
@@ -824,7 +869,12 @@ wss.on(
                 {
 
 
-                  type:'userLeft'
+                  type:'userLeft',
+
+
+                  onlineCount:
+
+                    sendOnlineCount(room)
 
 
                 },
@@ -839,10 +889,9 @@ wss.on(
 
 
 
-
               if(
 
-                room.clients.length===0
+                room.clients.length === 0
 
               ){
 
@@ -851,7 +900,6 @@ wss.on(
 
 
               }
-
 
 
             }
@@ -865,6 +913,7 @@ wss.on(
             ws.roomCode = null
 
             ws.isHost = false
+
 
 
 
@@ -887,7 +936,6 @@ wss.on(
 
 
 
-
           // 普通同步消息
 
           default:{
@@ -897,6 +945,8 @@ wss.on(
             const room =
 
               rooms[ws.roomCode]
+
+
 
 
 
@@ -938,7 +988,6 @@ wss.on(
 
 
 
-
             broadcast(
 
               room,
@@ -954,11 +1003,10 @@ wss.on(
 
 
 
+
             break
 
           }
-
-
 
 
 
@@ -968,9 +1016,12 @@ wss.on(
 
 
 
+
+
       }
 
     )
+
 
 
 
@@ -993,11 +1044,11 @@ wss.on(
 
 
 
-
-
         const code =
 
           ws.roomCode
+
+
 
 
 
@@ -1011,9 +1062,13 @@ wss.on(
 
 
 
+
+
         const room =
 
           rooms[code]
+
+
 
 
 
@@ -1033,9 +1088,10 @@ wss.on(
 
           room.clients.filter(
 
-            client=>client!==ws
+            client => client !== ws
 
           )
+
 
 
 
@@ -1061,30 +1117,22 @@ wss.on(
             client=>{
 
 
-              if(
+              sendMessage(
 
-                client.readyState === WebSocket.OPEN
+                client,
 
-              ){
-
-
-                client.send(
-
-                  JSON.stringify({
+                {
 
 
-                    type:'roomError',
+                  type:'roomError',
 
 
-                    message:'房主断开，一起听结束'
+                  message:'房主断开，一起听结束'
 
 
-                  })
+                }
 
-                )
-
-
-              }
+              )
 
 
             }
@@ -1096,7 +1144,10 @@ wss.on(
 
 
 
+
           delete rooms[code]
+
+
 
 
 
@@ -1123,7 +1174,12 @@ wss.on(
           {
 
 
-            type:'userLeft'
+            type:'userLeft',
+
+
+            onlineCount:
+
+              sendOnlineCount(room)
 
 
           },
@@ -1138,10 +1194,9 @@ wss.on(
 
 
 
-
         if(
 
-          room.clients.length===0
+          room.clients.length === 0
 
         ){
 
@@ -1158,8 +1213,6 @@ wss.on(
       }
 
     )
-
-
 
 
 
