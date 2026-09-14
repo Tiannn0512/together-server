@@ -137,7 +137,11 @@ function updateRoomState(room, message) {
     case 'musicChange':
       if (message.data && message.data.musicInfo) {
         room.state.musicInfo = message.data.musicInfo
-        room.state.currentTime = 0
+        // 附带进度时直接存入，新加入者 syncState 更准；旧客户端不带该字段时退回 0
+        room.state.currentTime = message.data.currentTime !== undefined
+          ? message.data.currentTime
+          : 0
+        room.state.timestamp = Date.now()
       }
       break
 
